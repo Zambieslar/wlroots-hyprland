@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <gbm.h>
 #include <wlr/render/egl.h>
@@ -507,7 +508,38 @@ static int open_render_node(int drm_fd) {
 		}
 		wlr_log(WLR_DEBUG, "DRM device '%s' has no render node, "
 			"falling back to primary node", render_name);
+		if (strcmp(render_name, "evdi") == 0) {
+			free(render_name);
+
+			uint32_t flags = 0;
+			const int devices_len - drmGetDevices2(flags, NULL, 0);
+			if (devices_len < 0) {
+				wlr_log(WLR_ERROR, "drmGetDevice2 failed: %s", strerror(-devices_len));
+				return -1;
+			}
+
+			const char *render_devices[] = {
+				"/dev/dri/card0",
+				"/dev/dri/card1",
+				"/dev/dri/card2",
+				"/dev/dri/card3",
+				"/dev/dri/card4",
+				"/dev/dri/card5",
+				"/dev/dri/card6",
+				"/dev/dri/card7",
+				"/dev/dri/card8",
+				"/dev/dri/card9",
+				NULL
+			}
+
+			render_name = malloc(sizeof(char)*15);
+			render_name = strcpy(render_name, render_devices[env_parse_switch("WLR_EVDI_RENDER_DEVICE", render_devices)]);
+		}
+		drmFreeVersion(render_name);
+
 	}
+}
+	wlr_log(WLR_DEBUG, "open_render_node() DRM device '%s", render_name);
 
 	int render_fd = open(render_name, O_RDWR | O_CLOEXEC);
 	if (render_fd < 0) {
